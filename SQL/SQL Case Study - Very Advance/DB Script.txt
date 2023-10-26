@@ -1,0 +1,531 @@
+Use PostgreSQL's pgadmin tool to run this Script
+
+Sample codes for creation of tables:
+/*==============================================================*/
+/* Table: Customer */
+/*==============================================================*/
+create table company.Customer (
+Id int ,
+FirstName varchar(40) not null,
+LastName varchar(40) not null,
+City varchar(40) null,
+Country varchar(40) null,
+Phone varchar(20) null,
+constraint PK_CUSTOMER primary key (Id)
+)
+
+/*==============================================================*/
+/* Index: IndexCustomerName */
+/*==============================================================*/
+create index IndexCustomerName on company.Customer (
+LastName ASC,
+FirstName ASC
+)
+
+/*==============================================================*/
+/* Table: "Order" */
+/*==============================================================*/
+create table company.Order (
+Id int ,
+OrderDate varchar not null ,
+OrderNumber varchar(10) null,
+CustomerId int not null,
+TotalAmount decimal(12,2) null default 0,
+constraint PK_ORDER primary key (Id)
+)
+
+UPDATE  company.order  SET orderdate=to_date(orderdate, 'MM/DD/YYYY');
+alter table company.order 
+  alter orderdate type date using(orderdate::date)
+
+/*==============================================================*/
+/* Index: IndexOrderCustomerId */
+/*==============================================================*/
+create index IndexOrderCustomerId on company.Order (
+CustomerId ASC
+)
+
+/*==============================================================*/
+/* Index: IndexOrderOrderDate */
+/*==============================================================*/
+create index IndexOrderOrderDate on company.Order (
+OrderDate ASC
+)
+
+/*==============================================================*/
+/* Table: OrderItem */
+/*==============================================================*/
+create table company.OrderItem (
+Id int ,
+OrderId int not null,
+ProductId int not null,
+UnitPrice decimal(12,2) not null default 0,
+Quantity int not null default 1,
+Discount float not null default 0,
+constraint PK_ORDERITEM primary key (Id)
+)
+
+
+/*==============================================================*/
+/* Index: IndexOrderItemOrderId */
+/*==============================================================*/
+create index IndexOrderItemOrderId on company.OrderItem (
+OrderId ASC
+)
+
+/*==============================================================*/
+/* Index: IndexOrderItemProductId */
+/*==============================================================*/
+create index IndexOrderItemProductId on company.OrderItem (
+ProductId ASC
+)
+
+
+/*==============================================================*/
+/* Table: Product */
+/*==============================================================*/
+create table company.Product (
+Id int ,
+ProductName varchar(50) not null,
+SupplierId int not null,
+UnitPrice decimal(12,2) null,
+Package varchar(30) null,
+	IsDiscontinued boolean not null ,
+constraint PK_PRODUCT primary key (Id)
+)
+
+/*==============================================================*/
+/* Index: IndexProductSupplierId */
+/*==============================================================*/
+create index IndexProductSupplierId on company.Product (
+SupplierId ASC
+)
+
+
+/*==============================================================*/
+/* Index: IndexProductName */
+/*==============================================================*/
+create index IndexProductName on company.Product (
+ProductName ASC
+)
+
+/*==============================================================*/
+/* Table: Supplier */
+/*==============================================================*/
+create table company.Supplier (
+Id int ,
+CompanyName varchar(40) not null,
+ContactName varchar(50) null,
+ContactTitle varchar(40) null,
+City varchar(40) null,
+Country varchar(40) null,
+Phone varchar(30) null,
+Fax varchar(30) null,
+constraint PK_SUPPLIER primary key (Id)
+)
+
+
+/*==============================================================*/
+/* Index: IndexSupplierName */
+/*==============================================================*/
+create index IndexSupplierName on company.Supplier (
+CompanyName ASC
+)
+
+
+/*==============================================================*/
+/* Index: IndexSupplierCountry */
+/*==============================================================*/
+create index IndexSupplierCountry on company.Supplier (
+Country ASC
+)
+
+alter table company.Order
+add constraint FK_ORDER_REFERENCE_CUSTOMER foreign key (CustomerId)
+references company.Customer (Id)
+----------
+alter table company.OrderItem
+add constraint FK_ORDERITE_REFERENCE_ORDER foreign key (OrderId)
+references company.Order (Id)
+-------------
+alter table company.OrderItem
+add constraint FK_ORDERITE_REFERENCE_PRODUCT foreign key (ProductId)
+references company.Product (Id)
+
+alter table company.Product
+add constraint FK_PRODUCT_REFERENCE_SUPPLIER foreign key (SupplierId)
+references company.Supplier (Id)
+
+List of Questions
+1. List all customers
+select * from company.customer 
+
+2. List the first name, last name, and city of all customers
+
+select firstname,lastname,city from company.customer order by firstname
+
+3. List the customers in Sweden. Remember it is "Sweden" and NOT "sweden" because filtering
+value is case sensitive in Redshift.
+
+select * from company.customer  where country='Sweden'
+
+
+4. Create a copy of Supplier table. Update the city to Sydney for supplier starting with letter P.
+
+select * into company.supplier1 from company.supplier where  companyname like 'P%'
+select * from company.supplier1
+update company.supplier1 set city='Sydney'
+
+5. Create a copy of Products table and Delete all products with unit price higher than $50
+
+select * into company.product1  from company.product
+select * from company.product1  where unitprice>50
+delete from   company.product1  where unitprice>50
+
+select * from company.product1 order by unitprice desc
+
+.
+6. List the number of customers in each country
+select country,count(*) customer_count from company.customer group by country
+
+7. List the number of customers in each country sorted high to low
+
+select country,count(*) customer_count from company.customer group by country order by customer_count desc
+
+
+8. List the total amount for items ordered by each customer
+select c.firstname ||'  ' || c.lastname,o.totalamount from company.customer c
+join company.order o on c.id=o.customerid
+
+
+
+
+
+9. List the number of customers in each country. Only include countries with more than 10
+customers.
+select country,count(*) from company.customer group by country having count(*) >1 
+select * from company.customer where country='USA'
+
+10. List the number of customers in each country, except the USA, sorted high to low. Only
+include countries with 9 or more customers.
+
+
+select country,count(*) as cust_count from company.customer
+ where country not in ('USA')  group by country order by cust_count desc
+ 
+11. List all customers whose first name or last name contains "ill
+
+select *  from company.customer  where  firstname ilike '%ill%' or lastname ilike '%ill%'
+
+12. List all customers whose average of their total order amount is between $1000 and
+$1200.Limit your output to 5 results.
+
+select customerid,avg_amount from (
+select customerid,round(avg(totalamount)) as avg_amount from company.order
+ group by customerid)a
+ where avg_amount between 1000 and 1200 limit 5
+
+
+13. List all suppliers in the 'USA', 'Japan', and 'Germany', ordered by country from A-Z, and then
+by company name in reverse order.
+select * from company.customer limit 1
+select country,companyname from company.supplier group by country,companyname
+order by country asc ,companyname desc
+
+
+14. Show all orders, sorted by total amount (the largest amount first), within each year.
+
+select extract(year from orderdate) as order_year,totalamount,* from company.order
+order by totalamount
+
+15. Products with UnitPrice greater than 50 are not selling despite promotions. You are asked to
+discontinue products over $25. Write a query to relfelct this. Do this in the copy of the Product
+table. DO NOT perform the update operation in the Product table.
+
+select * into company.discontinue_product from company.product
+where unitprice<=25 
+select * from company.discontinue_product 
+
+
+
+
+16. List top 10 most expensive products
+select productname,unitprice from  company.product order  by unitprice desc limit 10
+
+
+17. Get all but the 10 most expensive products sorted by price
+select productname,unitprice from  company.product order  by unitprice desc limit 10
+
+18. Get the 10th to 15th most expensive products sorted by price
+
+select productname,unitprice from  company.product order  by unitprice desc offset 10 
+FETCH NEXT 5 ROWS ONLY
+or 
+select productname,unitprice from  company.product order  by unitprice desc offset 10 
+limit 5
+
+
+19. Write a query to get the number of supplier countries. Do not count duplicate values.
+
+select distinct country from company.supplier 
+
+20. Find the total sales cost in each month of the year 2013.
+
+select order_year,order_month,sum(s) from (
+select extract(year from orderdate) as order_year,extract(month from orderdate) as order_month
+,count(*) as s from company.order group by orderdate )a
+group by a.order_year,a.order_month order by a.order_year,
+
+
+21. List all products with names that start with 'Ca'
+select * from company.product where productname like 'Ca%'
+.
+22. List all products that start with 'Cha' or 'Chan' and have one more character.
+select * from company.product where productname like any (array['Cha%', 'Chan%']);
+
+23. Your manager notices there are some suppliers without fax numbers. He seeks your help to
+get a list of suppliers with remark as "No fax number" for suppliers who do not have fax
+numbers (fax numbers might be null or blank).Also, Fax number should be displayed for
+customer with fax numbers.
+
+select * from  company.supplier limit 1
+select companyname,fax, case
+ WHEN fax=null THEN
+ 'No fax number'
+ ELSE
+ fax
+ END fax_no from company.supplier 
+
+24. List all orders, their orderDates with product names, quantities, and prices.
+
+select * from company.order limit 1
+select * from company.orderitem
+select * from company.product limit 1
+
+select o.orderdate,p.productname,ot.quantity,ot.unitprice from company.orderitem ot
+join company.order o on ot.orderid=o.id
+join company.product p on ot.productid=p.id
+
+
+
+
+25. List all customers who have not placed any Orders.
+select * from company.order limit 1
+select * from company.customer where id not in
+(select customerid from company.order)
+
+26. List suppliers that have no customers in their country, and customers that have no suppliers
+in their country, and customers and suppliers that are from the same country
+
+
+select * from company.customer 
+select * from company.supplier
+select c.firstname,c.country as cut_country,s.country from company.customer c
+left join company.supplier s on  c.id =s.id
+
+
+27. Match customers that are from the same city and country. That is you are asked to give a list
+of customers that are from same country and city. Display firstname, lastname, city and
+coutntry of such customers.
+
+select firstname,country as cust_not_su,'0' as supp_not,'0' both_in from company.customer where country not in 
+(select country from company.supplier)
+
+ union all
+ 
+ select 'null' firstname, '0' as cust_not_su,country as supp_not,'0'both_in from company.supplier where country not in 
+(select country from company.customer)
+
+union all 
+
+ select firstname, '0' as cust_not_su,'0' supp_not,country as both_in from company.customer where country in  
+(select country from company.supplier)
+
+
+27. Match customers that are from the same city and country. That is you are asked to give a list
+of customers that are from same country and city. Display firstname, lastname, city and
+coutntry of such customers.
+
+select c.firstname ||' ' || c.lastname as Customer1,a.firstname||' ' || a.lastname as Customer2,c.city,c.country from company.customer  c
+join company.customer a on c.id !=a.id
+where c.city=a.city and c.country=a.country
+
+28.? List all Suppliers and Customers. Give a Label in a separate column as 'Suppliers' if he is a
+supplier and 'Customer' if he is a customer accordingly. Also, do not display firstname and
+lastname as twoi fields; Display Full name of customer or supplier.
+
+select * from company.supplier
+
+select c.id,s.id, c.firstname ||' ' || c.lastname custname,s.companyname as suppliername,
+c.country,s.country from company.customer c
+join company.supplier s on c.id=s.id
+
+
+29.? Create a copy of orders table. In this copy table, now add a column city of type varchar (40).
+Update this city column using the city info in customers table.
+select * from company.customer where id=51
+select * from  company.order1
+
+--drop table company.order1
+select * into company.order1 from company.order
+alter table company.order1
+add column city character varying
+
+update  company.order1  b
+set city=a.city
+
+from
+(
+select o.id,c.city from company.order o 
+join company.customer c on o.customerid=c.id
+)a
+where b.id=a.id
+
+
+
+30.? Suppose you would like to see the last OrderID and the OrderDate for this last order that
+was shipped to 'Paris'. Along with that information, say you would also like to see the
+OrderDate for the last order shipped regardless of the Shipping City. In addition to this, you
+would also like to calculate the difference in days between these two OrderDates that you get.
+Write a single query which performs this.
+select  max(orderdate) as maxdate from company.order
+
+
+select y.id,x.maxdate,y.lastparisdate from (
+(select id, max(orderdate) as maxdate from company.order
+group by id)x
+
+join 
+
+(select o.id,max(o.orderdate) as lastparisdate from company.order o 
+join company.customer c on o.customerid=c.id
+where c.city='Paris'
+group by o.id)y on x.id=y.id
+	)
+	group by y.id,x.maxdate,y.lastparisdate
+
+
+	 
+	 
+31. Find those customer countries who do not have suppliers. This might help you provide
+better delivery time to customers by adding suppliers to these countires. Use SubQueries.
+
+select country from company.customer where country not in 
+(select country from company.supplier)
+
+32. Suppose a company would like to do some targeted marketing where it would contact
+customers in the country with the fewest number of orders. It is hoped that this targeted
+marketing will increase the overall sales in the targeted country. You are asked to write a query
+to get all details of such customers from top 5 countries with fewest numbers of orders. Use
+Subqueries.
+
+select distinct country from (
+select c.id,c.country,count(o.customerid) from company.order o
+join company.customer c on o.customerid=c.id
+group by  c.id,c.country order by count(o.customerid) asc
+ 
+	)a limit 5
+
+
+33. Let's say you want report of all distinct "OrderIDs" where the customer did not purchase
+more than 10% of the average quantity sold for a given product. This way you could review
+these orders, and possibly contact the customers, to help determine if there was a reason for
+the low quantity order. Write a query to report such orderIDs.
+
+select * from company.orderitem
+
+select distinct orderid,quantity,qty_ten from (
+select orderid,productid,quantity,avg(quantity) as qty_ten
+from company.orderitem
+group by  orderid,productid,quantity
+  ) a where a.quantity <= a.qty_ten*10/100
+  
+  
+  34. Find Customers whose total orderitem amount is greater than 7500$ for the year 2013. The
+total order item amount for 1 order for a customer is calculated using the formula UnitPrice *
+Quantity * (1 - Discount). DO NOT consider the total amount column from 'Order' table to
+calculate the total orderItem for a customer.
+
+select * from company.order
+select * from company.orderitem
+
+select a.id,a.totalamt from 
+(select o.id,ot.UnitPrice *ot.quantity * (1 - ot.discount) as totalamt from company.orderitem ot
+join company.order o on ot.id=o.id
+where extract(year from o.orderdate)='2013')a
+where a.totalamt>7500
+
+35. Display the top two customers, based on the total dollar amount associated with their
+orders, per country. The dollar amount is calculated as OI.unitprice * OI.Quantity * (1 -
+OI.Discount). You might want to perform a query like this so you can reward these customers,
+since they buy the most per country.
+select * from company.orderitem
+select * from company.order
+ select * from company.customer
+
+select c.id,c.firstname||' '||c.lastname as customername,c.country,OI.unitprice * OI.Quantity * (1 -
+OI.Discount) as doller_amount from company.orderitem OI
+join company.order o on OI.orderid=o.id
+join company.customer c on c.id=o.customerid
+order by doller_amount desc limit 2
+
+
+
+36. Create a View of Products whose unit price is above average Price.
+select * from company.productwise
+
+-- View: company.productwise
+
+-- DROP VIEW company.productwise;
+
+CREATE OR REPLACE VIEW company.productwise AS
+ SELECT product.productname
+   FROM company.product
+  WHERE product.unitprice > (( SELECT avg(product.unitprice) AS avg
+           FROM company.product))
+  ORDER BY product.productname;
+
+ALTER TABLE company.productwise
+    OWNER TO postgres;
+	
+	
+	37. Write a store procedure that performs the following action:
+Check if Product_copy table (this is a copy of Product table) is present. If table exists, the
+procedure should drop this table first and recreated.
+Add a column Supplier_name in this copy table. Update this column with that of
+'CompanyName' column from Supplier tab
+
+
+DROP TABLE IF EXISTS company.product_copy;
+select * into company.product_copy from company.product
+
+alter table company.product_copy
+add column Supplier_name character varying
+
+--select * from company.supplier
+--select * from company.product_copy
+update  company.product_copy  b
+set supplier_name=a.companyname
+
+from
+(
+select id,companyname from company.supplier  
+)a
+where b.supplierid=a.id
+	
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+ 

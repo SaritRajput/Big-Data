@@ -1,0 +1,5 @@
+Firstly to set up connection with sql
+mysql -u retail_user -h g02.itversity.com -p;
+passoword: itversity
+
+MariaDB [(none)]> show databases;

@@ -1,0 +1,6 @@
+-rw-r--r-- 1 itv003722 students  594 Dec 21 00:45 categories.avsc
+-rw-r--r-- 1 itv003722 students 1509 Dec 21 00:45 customers.avsc
+-rw-r--r-- 1 itv003722 students  440 Dec 21 00:45 departments.avsc
+-rw-r--r-- 1 itv003722 students 1099 Dec 21 00:46 order_items.avsc
+-rw-r--r-- 1 itv003722 students  707 Dec 21 00:46 orders.avsc
+-rw-r--r-- 1 itv003722 students 1041 Dec 21 00:46 products.avsc

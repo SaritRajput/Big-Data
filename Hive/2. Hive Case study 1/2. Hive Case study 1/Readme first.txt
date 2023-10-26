@@ -1,0 +1,1 @@
+For Dataco data sets, you can transfer the data from ITVarsity MySQL retail database using SQOOP trasfer.
